@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ポケチーム">
+<title>ポケモンチャンピオンズ チーム管理</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #f5f5f0;
+    --surface: #ffffff;
+    --border: rgba(0,0,0,0.1);
+    --text: #1a1a1a;
+    --text-sub: #666;
+    --text-hint: #aaa;
+    --radius: 14px;
+    --radius-sm: 8px;
+    --accent: #5b4fcf;
+  }
+  body { font-family: -apple-system, 'Hiragino Sans', 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* Header */
+  .header { background: var(--surface); border-bottom: 0.5px solid var(--border); padding: 14px 16px 12px; position: sticky; top: 0; z-index: 100; }
+  .header-top { display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { font-size: 17px; font-weight: 600; color: var(--text); }
+  .team-badge { font-size: 12px; background: #5b4fcf18; color: var(--accent); padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+
+  /* Nav tabs */
+  .nav { display: flex; background: var(--surface); border-bottom: 0.5px solid var(--border); }
+  .nav-tab { flex: 1; padding: 12px 0; font-size: 12px; font-weight: 500; color: var(--text-sub); border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; }
+  .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* Team grid */
+  .section { padding: 14px 12px; }
+  .team-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .slot { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 12px; min-height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; cursor: pointer; transition: background 0.12s; }
+  .slot:active { background: #f0f0f0; }
+  .slot.filled { align-items: flex-start; justify-content: flex-start; cursor: default; }
+  .slot-num { position: absolute; top: 8px; left: 10px; font-size: 10px; color: var(--text-hint); font-weight: 600; }
+  .slot-empty i { font-size: 26px; color: var(--text-hint); }
+  .slot-empty p { font-size: 11px; color: var(--text-hint); margin-top: 4px; }
+  .poke-emoji { font-size: 38px; text-align: center; width: 100%; margin-bottom: 4px; line-height: 1; }
+  .poke-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .poke-level { font-size: 11px; color: var(--text-sub); margin-top: 3px; }
+  .remove-btn { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; background: #0001; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-sub); font-size: 14px; }
+  .remove-btn:active { background: #0002; }
+  .types { display: flex; gap: 3px; flex-wrap: wrap; }
+  .type-pill { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 20px; }
+
+  /* Pokemon list */
+  .search-wrap { padding: 10px 12px 6px; background: var(--bg); position: sticky; top: 0; z-index: 10; }
+  .search-wrap input { width: 100%; background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 15px; color: var(--text); outline: none; }
+  .search-wrap input::placeholder { color: var(--text-hint); }
+  .poke-list { padding: 0 12px 100px; display: flex; flex-direction: column; gap: 7px; }
+  .poke-row { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 11px 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: background 0.12s; }
+  .poke-row:active { background: #f0f0f0; }
+  .poke-row.in-team { opacity: 0.45; cursor: default; }
+  .poke-row-emoji { font-size: 28px; width: 36px; text-align: center; }
+  .poke-row-info { flex: 1; }
+  .poke-row-name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .poke-row-types { display: flex; gap: 3px; margin-top: 3px; }
+  .poke-row-action { font-size: 20px; color: var(--text-hint); }
+  .poke-row.in-team .poke-row-action { color: #62b957; }
+
+  /* Coverage */
+  .card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; }
+  .card-title { font-size: 12px; font-weight: 600; color: var(--text-sub); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .coverage-pills { display: flex; flex-wrap: wrap; gap: 5px; }
+  .coverage-pill { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 20px; }
+  .empty-msg { font-size: 13px; color: var(--text-hint); }
+  .advice-btn { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 4px; }
+  .advice-btn:active { opacity: 0.85; }
+  .weakness-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 0.5px solid var(--border); }
+  .weakness-row:last-child { border-bottom: none; }
+  .weakness-poke { font-size: 13px; color: var(--text); font-weight: 500; flex: 1; }
+  .weakness-types { display: flex; flex-wrap: wrap; gap: 3px; }
+
+  /* Page system */
+  .page { display: none; }
+  .page.active { display: block; }
+  .sticky-search { position: sticky; top: 0; z-index: 5; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <h1>⚔️ チーム管理</h1>
+    <span class="team-badge" id="team-badge">0 / 6</span>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="nav-tab active" onclick="showPage('team')" id="tab-team">
+    <i class="ti ti-users"></i><br>チーム
+  </button>
+  <button class="nav-tab" onclick="showPage('add')" id="tab-add">
+    <i class="ti ti-plus"></i><br>追加
+  </button>
+  <button class="nav-tab" onclick="showPage('coverage')" id="tab-coverage">
+    <i class="ti ti-shield"></i><br>相性
+  </button>
+</div>
+
+<!-- Team page -->
+<div class="page active" id="page-team">
+  <div class="section">
+    <div class="team-grid" id="team-grid"></div>
+  </div>
+</div>
+
+<!-- Add pokemon page -->
+<div class="page" id="page-add">
+  <div class="sticky-search">
+    <div class="search-wrap">
+      <input type="search" id="search-input" placeholder="ポケモン名やタイプで検索..." oninput="filterList()" autocomplete="off" />
+    </div>
+  </div>
+  <div class="poke-list" id="poke-list"></div>
+</div>
+
+<!-- Coverage page -->
+<div class="page" id="page-coverage">
+  <div class="section" id="coverage-content"></div>
+</div>
+
+<script>
+const TYPE_COLORS = {
+  'ノーマル': ['#b0afa6','#2c2c28'], 'ほのお': ['#e8723a','#5a1a00'],
+  'みず': ['#4d90d5','#0a2a50'], 'でんき': ['#e8c22a','#4a3500'],
+  'くさ': ['#62b957','#0f3a0a'], 'こおり': ['#74cec0','#0a3530'],
+  'かくとう': ['#c03028','#3a0000'], 'どく': ['#a040a0','#300030'],
+  'じめん': ['#e0c068','#4a3400'], 'ひこう': ['#a890f0','#1a0870'],
+  'エスパー': ['#f85888','#5a0018'], 'むし': ['#a8b820','#2a3000'],
+  'いわ': ['#b8a038','#3a2800'], 'ゴースト': ['#705898','#100028'],
+  'ドラゴン': ['#7038f8','#200080'], 'あく': ['#705848','#201008'],
+  'はがね': ['#b8b8d0','#202038'], 'フェアリー': ['#f0b6bc','#500020']
+};
+
+const POKEMON = [
+  { id:1, name:'フシギダネ', emoji:'🌿', types:['くさ','どく'], level:50 },
+  { id:2, name:'ヒトカゲ', emoji:'🦎', types:['ほのお'], level:50 },
+  { id:3, name:'ゼニガメ', emoji:'🐢', types:['みず'], level:50 },
+  { id:4, name:'ピカチュウ', emoji:'⚡', types:['でんき'], level:50 },
+  { id:5, name:'イーブイ', emoji:'🦊', types:['ノーマル'], level:50 },
+  { id:6, name:'カイリュー', emoji:'🐉', types:['ドラゴン','ひこう'], level:50 },
+  { id:7, name:'ゲンガー', emoji:'👻', types:['ゴースト','どく'], level:50 },
+  { id:8, name:'ガブリアス', emoji:'🦈', types:['ドラゴン','じめん'], level:50 },
+  { id:9, name:'リザードン', emoji:'🔥', types:['ほのお','ひこう'], level:50 },
+  { id:10, name:'ミュウツー', emoji:'🔮', types:['エスパー'], level:50 },
+  { id:11, name:'ルカリオ', emoji:'🥋', types:['かくとう','はがね'], level:50 },
+  { id:12, name:'ヒードラン', emoji:'🌋', types:['ほのお','はがね'], level:50 },
+  { id:13, name:'テラキオン', emoji:'🦌', types:['いわ','かくとう'], level:50 },
+  { id:14, name:'ファイアロー', emoji:'🦅', types:['ほのお','ひこう'], level:50 },
+  { id:15, name:'ドヒドイデ', emoji:'🪸', types:['みず','どく'], level:50 },
+  { id:16, name:'ミミッキュ', emoji:'🎭', types:['ゴースト','フェアリー'], level:50 },
+  { id:17, name:'コノヨザル', emoji:'🐒', types:['かくとう','ゴースト'], level:50 },
+  { id:18, name:'サーフゴー', emoji:'🏆', types:['はがね','ゴースト'], level:50 },
+  { id:19, name:'イルカマン', emoji:'🐬', types:['みず'], level:50 },
+  { id:20, name:'マスカーニャ', emoji:'🃏', types:['くさ','あく'], level:50 },
+  { id:21, name:'ラウドボーン', emoji:'🦴', types:['ほのお','ゴースト'], level:50 },
+  { id:22, name:'ウェーニバル', emoji:'🥊', types:['みず','かくとう'], level:50 },
+];
+
+let team = [];
+let filtered = [...POKEMON];
+
+function typePill(type, small) {
+  const [bg, text] = TYPE_COLORS[type] || ['#888','#fff'];
+  return `<span class="type-pill" style="background:${bg}22;color:${bg};border:0.5px solid ${bg}66;font-size:${small?'10':'11'}px;">${type}</span>`;
+}
+
+function renderTeam() {
+  const grid = document.getElementById('team-grid');
+  grid.innerHTML = '';
+  for (let i = 0; i < 6; i++) {
+    const p = team[i];
+    const div = document.createElement('div');
+    div.className = 'slot' + (p ? ' filled' : '');
+    if (p) {
+      div.innerHTML = `
+        <span class="slot-num">${i+1}</span>
+        <button class="remove-btn" onclick="remove(${i})" aria-label="外す"><i class="ti ti-x"></i></button>
+        <div class="poke-emoji">${p.emoji}</div>
+        <div class="poke-name">${p.name}</div>
+        <div class="types">${p.types.map(t=>typePill(t,true)).join('')}</div>
+        <div class="poke-level">Lv.${p.level}</div>`;
+    } else {
+      div.innerHTML = `<span class="slot-num">${i+1}</span><div class="slot-empty"><i class="ti ti-plus"></i><p>追加する</p></div>`;
+      div.onclick = () => showPage('add');
+    }
+    grid.appendChild(div);
+  }
+  document.getElementById('team-badge').textContent = `${team.length} / 6`;
+}
+
+function renderList() {
+  const list = document.getElementById('poke-list');
+  const ids = new Set(team.map(p=>p.id));
+  list.innerHTML = '';
+  filtered.forEach(p => {
+    const inTeam = ids.has(p.id);
+    const div = document.createElement('div');
+    div.className = 'poke-row' + (inTeam ? ' in-team' : '');
+    div.innerHTML = `
+      <span class="poke-row-emoji">${p.emoji}</span>
+      <div class="poke-row-info">
+        <div class="poke-row-name">${p.name}</div>
+        <div class="poke-row-types">${p.types.map(t=>typePill(t,true)).join('')}</div>
+      </div>
+      <i class="ti ${inTeam ? 'ti-check' : 'ti-plus'} poke-row-action"></i>`;
+    if (!inTeam) div.onclick = () => add(p);
+    list.appendChild(div);
+  });
+}
+
+function renderCoverage() {
+  const el = document.getElementById('coverage-content');
+  if (team.length === 0) {
+    el.innerHTML = '<p style="padding:20px;color:var(--text-hint);text-align:center;">チームにポケモンを追加してください</p>';
+    return;
+  }
+  const types = [...new Set(team.flatMap(p => p.types))];
+  const typesHtml = types.map(t => {
+    const [bg] = TYPE_COLORS[t] || ['#888'];
+    return `<span class="coverage-pill" style="background:${bg}22;color:${bg};border:0.5px solid ${bg}66;">${t}</span>`;
+  }).join('');
+
+  let html = `
+    <div class="card">
+      <div class="card-title">攻撃タイプカバレッジ</div>
+      <div class="coverage-pills">${typesHtml}</div>
+    </div>
+    <div class="card">
+      <div class="card-title">チームのポケモン</div>`;
+  team.forEach(p => {
+    html += `<div class="weakness-row">
+      <span style="font-size:22px;margin-right:4px;">${p.emoji}</span>
+      <span class="weakness-poke">${p.name}</span>
+      <div class="weakness-types">${p.types.map(t=>typePill(t,true)).join('')}</div>
+    </div>`;
+  });
+  html += `</div>`;
+  el.innerHTML = html;
+}
+
+function add(p) {
+  if (team.length >= 6 || team.find(t=>t.id===p.id)) return;
+  team.push({...p});
+  renderTeam();
+  renderList();
+  if (team.length >= 6) showPage('team');
+}
+
+function remove(i) {
+  team.splice(i, 1);
+  renderTeam();
+  renderList();
+}
+
+function filterList() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  filtered = POKEMON.filter(p => p.name.includes(q) || p.types.some(t=>t.includes(q)));
+  renderList();
+}
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'coverage') renderCoverage();
+}
+
+renderTeam();
+renderList();
+</script>
+</body>
+</html>
